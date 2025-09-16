@@ -17,7 +17,8 @@ def add_post():
             "id": len(posts) + 1,
             "author": request.form['author'],
             "title": request.form['title'],
-            "content": request.form['content']
+            "content": request.form['content'],
+            "likes": 0
         }
         posts.append(new_post)
         save_posts(posts)
@@ -50,6 +51,17 @@ def update(post_id):
         return redirect(url_for('index'))
 
     return render_template('update.html', post=post)
+
+
+@app.route('/like/<int:post_id>')
+def like(post_id):
+    posts = load_posts()
+    post = next((p for p in posts if p['id'] == post_id), None)
+    if post:
+        post['likes'] += 1
+        save_posts(posts)
+    return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5001, debug=True)
