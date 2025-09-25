@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from utils import load_posts, save_posts
+import uuid  # Für eindeutige IDs
 
 app = Flask(__name__)
 
@@ -8,33 +9,32 @@ def index():
     posts = load_posts()
     return render_template('index.html', posts=posts)
 
-
 @app.route('/add', methods=['GET', 'POST'])
 def add_post():
     if request.method == 'POST':
+        author = request.form['author'].strip()
+        title = request.form['title'].strip()
+        content = request.form['content'].strip()
+
+        if not author or not title or not content:
+            return render_template('add.html', error="All fields must be filled!",
+                                   author=author, title=title, content=content)
+
         posts = load_posts()
         new_post = {
-            "id": len(posts) + 1,
-            "author": request.form['author'],
-            "title": request.form['title'],
-            "content": request.form['content'],
+            "id": str(uuid.uuid4()),  # eindeutige ID
+            "author": author,
+            "title": title,
+            "content": content,
             "likes": 0
         }
         posts.append(new_post)
         save_posts(posts)
         return redirect(url_for('index'))
+
     return render_template('add.html')
 
-
-@app.route('/delete/<int:post_id>')
-def delete(post_id):
-    posts = load_posts()
-    posts = [post for post in posts if post['id'] != post_id]
-    save_posts(posts)
-    return redirect(url_for('index'))
-
-
-@app.route('/update/<int:post_id>', methods=['GET', 'POST'])
+@app.route('/update/<post_id>', methods=['GET', 'POST'])
 def update(post_id):
     posts = load_posts()
     post = next((p for p in posts if p['id'] == post_id), None)
@@ -43,17 +43,29 @@ def update(post_id):
         return "Post not found", 404
 
     if request.method == 'POST':
-        # Werte aus Formular übernehmen
-        post['author'] = request.form['author']
-        post['title'] = request.form['title']
-        post['content'] = request.form['content']
+        author = request.form['author'].strip()
+        title = request.form['title'].strip()
+        content = request.form['content'].strip()
+
+        if not author or not title or not content:
+            return render_template('update.html', post=post, error="All fields must be filled!")
+
+        post['author'] = author
+        post['title'] = title
+        post['content'] = content
         save_posts(posts)
         return redirect(url_for('index'))
 
     return render_template('update.html', post=post)
 
+@app.route('/delete/<post_id>')
+def delete(post_id):
+    posts = load_posts()
+    posts = [post for post in posts if post['id'] != post_id]
+    save_posts(posts)
+    return redirect(url_for('index'))
 
-@app.route('/like/<int:post_id>')
+@app.route('/like/<post_id>')
 def like(post_id):
     posts = load_posts()
     post = next((p for p in posts if p['id'] == post_id), None)
@@ -61,7 +73,6 @@ def like(post_id):
         post['likes'] += 1
         save_posts(posts)
     return redirect(url_for('index'))
-
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
