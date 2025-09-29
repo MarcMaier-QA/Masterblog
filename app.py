@@ -1,13 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for
 from utils import load_posts, save_posts
-import uuid  # Für eindeutige IDs
 
 app = Flask(__name__)
+
 
 @app.route('/')
 def index():
     posts = load_posts()
     return render_template('index.html', posts=posts)
+
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_post():
@@ -17,12 +18,18 @@ def add_post():
         content = request.form['content'].strip()
 
         if not author or not title or not content:
-            return render_template('add.html', error="All fields must be filled!",
-                                   author=author, title=title, content=content)
+            return render_template(
+                'add.html',
+                error="All fields must be filled!",
+                author=author,
+                title=title,
+                content=content
+            )
 
         posts = load_posts()
+        # new ID = highest existing ID + 1
         new_post = {
-            "id": str(uuid.uuid4()),  # eindeutige ID
+            "id": max((post["id"] for post in posts), default=0) + 1,
             "author": author,
             "title": title,
             "content": content,
@@ -34,7 +41,8 @@ def add_post():
 
     return render_template('add.html')
 
-@app.route('/update/<post_id>', methods=['GET', 'POST'])
+
+@app.route('/update/<int:post_id>', methods=['GET', 'POST'])
 def update(post_id):
     posts = load_posts()
     post = next((p for p in posts if p['id'] == post_id), None)
@@ -48,7 +56,11 @@ def update(post_id):
         content = request.form['content'].strip()
 
         if not author or not title or not content:
-            return render_template('update.html', post=post, error="All fields must be filled!")
+            return render_template(
+                'update.html',
+                post=post,
+                error="All fields must be filled!"
+            )
 
         post['author'] = author
         post['title'] = title
@@ -58,14 +70,16 @@ def update(post_id):
 
     return render_template('update.html', post=post)
 
-@app.route('/delete/<post_id>')
+
+@app.route('/delete/<int:post_id>')
 def delete(post_id):
     posts = load_posts()
     posts = [post for post in posts if post['id'] != post_id]
     save_posts(posts)
     return redirect(url_for('index'))
 
-@app.route('/like/<post_id>')
+
+@app.route('/like/<int:post_id>')
 def like(post_id):
     posts = load_posts()
     post = next((p for p in posts if p['id'] == post_id), None)
@@ -73,6 +87,7 @@ def like(post_id):
         post['likes'] += 1
         save_posts(posts)
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
